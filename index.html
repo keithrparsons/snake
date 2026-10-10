@@ -924,7 +924,14 @@
     function setSfxVolume(v) { if (sfxGain) sfxGain.gain.value = Math.pow(v / 100, 1.6) * 1.4; }
     return {
       tracks: TRACKS.map(t => t.name),
-      unlock() { ensure(); if (ac.state === 'suspended') ac.resume(); },
+      unlock() {
+        // iPhone: play through the ring/silent switch, like a game (iOS 17+; ignored elsewhere)
+        try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+        ensure();
+        if (ac.state !== 'running') ac.resume();
+        // iPhone only trusts sound started inside a real tap: play one silent sample to open the gate
+        const b = ac.createBufferSource(); b.buffer = ac.createBuffer(1, 1, 22050); b.connect(ac.destination); b.start(0);
+      },
       setVolume,
       get on() { return on; },
       get track() { return track; },
@@ -989,6 +996,10 @@
     const want = major !== OPP[dir] ? major : minor;
     if (want !== dir) queue.push(want);
   }
+  // the first tap or key anywhere wakes the sound (iPhone and iPad need this; the D-pad's touch-down alone doesn't count)
+  for (const ev of ['touchend', 'click', 'keydown']) document.addEventListener(ev, () => audio.unlock(), { capture: true, passive: true });
+  // coming back to the tab or app, wake it again (iPhone pauses sound in the background)
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && audio.on) audio.unlock(); });
   $('screen').addEventListener('click', () => { humanInput(); if (state !== 'playing') start(); });
 
   // ---------- input: on-device buttons ----------
