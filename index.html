@@ -1,0 +1,1078 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pocket Snake Color</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* WLAN Pros palette (GL-003 §2) */
+    --lime: #A1CC3A;
+    --lime-dark: #7A9E26;
+    --lime-ink: #2F5E00;
+    --slate: #5B8DB8;
+    --slate-ink: #3F6E96;
+    --charcoal: #1A1A1A;
+    --page: #1A1A1A;
+    --text: #E5E5E5;
+    --muted: #9C9C9C;
+    --panel: #222222;
+    --panel-line: #333333;
+    --accent: var(--lime);
+    --bezel: #141414;
+    --btn: #3a3a3a;
+  }
+  /* Six shell colors, picked in the settings */
+  .device[data-shell=wlanpros]  { --shell: #2b2b2b; --shell-ink: #A1CC3A; }
+  .device[data-shell=lime]      { --shell: #A1CC3A; --shell-ink: #1A1A1A; }
+  .device[data-shell=slate]     { --shell: #5B8DB8; --shell-ink: #ffffff; }
+  .device[data-shell=white]     { --shell: #F7F7F5; --shell-ink: #2F5E00; }
+  .device[data-shell=grape]     { --shell: #6a4c9c; --shell-ink: #f2ecff; }
+  .device[data-shell=atomic]    { --shell: rgba(98, 72, 160, .72); --shell-ink: #f2ecff; }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--page);
+    color: var(--text);
+    font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 28px;
+    padding: 28px 16px;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* ---------- the handheld ---------- */
+  .device {
+    width: 380px;
+    max-width: 100%;
+    background:
+      radial-gradient(120% 60% at 30% 0%, rgba(255,255,255,.22), transparent 60%),
+      linear-gradient(170deg, color-mix(in srgb, var(--shell) 88%, #fff) 0%, var(--shell) 40%, color-mix(in srgb, var(--shell) 82%, #000) 100%);
+    border-radius: 26px 26px 46px 46px;
+    padding: 22px 22px 34px;
+    box-shadow:
+      inset -4px -6px 0 color-mix(in srgb, var(--shell) 70%, #000),
+      inset 3px 3px 0 color-mix(in srgb, var(--shell) 70%, #fff),
+      0 18px 40px rgba(0,0,0,.5);
+    position: relative;
+    transition: background .25s;
+  }
+  .device[data-shell=wlanpros] { box-shadow: inset 0 0 0 3px #A1CC3A33, inset -4px -6px 0 #151515, inset 3px 3px 0 #3d3d3d, 0 18px 40px rgba(0,0,0,.6); }
+  /* Atomic Purple: see-through shell with a hint of the board inside */
+  .device[data-shell=atomic] {
+    background:
+      repeating-linear-gradient(90deg, transparent 0 22px, rgba(40,200,120,.10) 22px 24px),
+      repeating-linear-gradient(0deg, transparent 0 30px, rgba(200,180,90,.10) 30px 31px),
+      linear-gradient(170deg, rgba(140,110,200,.78), rgba(70,48,120,.82));
+    backdrop-filter: blur(2px);
+  }
+
+  .bezel {
+    background: linear-gradient(180deg, #34333d, var(--bezel));
+    border-radius: 14px 14px 34px 34px;
+    padding: 16px 22px 18px 34px;
+    position: relative;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,.5);
+  }
+  .power-led {
+    position: absolute; left: 12px; top: 64px;
+    width: 9px; height: 9px; border-radius: 50%;
+    background: #3a1717;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.4);
+  }
+  .power-led.on { background: #ff4d4d; box-shadow: 0 0 8px #ff4d4d; }
+  .power-text {
+    position: absolute; left: 7px; top: 77px;
+    font-size: 7px; color: #9d9bab; letter-spacing: .04em;
+  }
+  .screen {
+    background: #F7F7F5;
+    border-radius: 4px;
+    padding: 6px;
+    box-shadow: inset 0 0 0 2px rgba(0,0,0,.18), inset 0 0 14px rgba(0,0,0,.12);
+    position: relative;
+    cursor: crosshair;
+    touch-action: none;
+  }
+  .hud {
+    display: flex; justify-content: space-between;
+    font-family: "DM Mono", "Courier New", monospace; font-weight: bold;
+    font-size: 13px; color: #1A1A1A;
+    padding: 0 2px 4px;
+  }
+  #hi { color: var(--lime-ink); }
+  #auto {
+    background: #E6EFCF; color: #7A9E26; border-radius: 3px;
+    padding: 0 6px; font-size: 10px; line-height: 16px; letter-spacing: .06em; font-weight: 500;
+  }
+  #auto[hidden] { display: none; }
+  canvas {
+    display: block; width: 100%; aspect-ratio: 1 / 1;
+    background: #F7F7F5;
+    border-radius: 2px;
+  }
+  .overlay {
+    position: absolute; left: 6px; right: 6px; bottom: 6px; top: 26px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; gap: 6px;
+    font-family: "DM Mono", "Courier New", monospace; font-weight: 500; color: #1A1A1A;
+    background: rgba(247,247,245,.9);
+    pointer-events: none;
+  }
+  .overlay[hidden] { display: none; }
+  .overlay .big { font-size: 24px; letter-spacing: .08em; }
+  .overlay .big { font-family: "IBM Plex Sans", sans-serif; font-weight: 700; }
+  .overlay .big span:nth-child(odd)  { color: var(--lime-ink); }
+  .overlay .big span:nth-child(even) { color: var(--slate-ink); }
+  .overlay .small { font-size: 12px; line-height: 1.5; }
+  .blink { animation: blink 1s steps(2, start) infinite; }
+  @keyframes blink { to { visibility: hidden; } }
+
+  .bezel-brand { display: flex; justify-content: center; margin-top: 10px; }
+  .bezel-brand img { height: 32px; width: auto; display: block; }
+
+  .brand {
+    margin: 16px 0 0; text-align: center;
+    font-style: italic; font-weight: bold;
+    color: var(--shell-ink); font-size: 20px; letter-spacing: .02em;
+    text-shadow: 0 1px 0 rgba(0,0,0,.18);
+  }
+  .brand .c { font-style: normal; font-size: 15px; letter-spacing: .06em; margin-left: 4px; text-shadow: 0 1px 0 rgba(0,0,0,.35); }
+  .brand { font-style: normal; font-weight: 700; }
+  .brand .c span:nth-child(odd)  { color: var(--lime); }
+  .brand .c span:nth-child(even) { color: var(--slate); }
+  .device[data-shell=lime] .brand .c span:nth-child(odd),
+  .device[data-shell=white] .brand .c span:nth-child(odd) { color: var(--lime-ink); }
+  .device[data-shell=lime] .brand .c span:nth-child(even),
+  .device[data-shell=white] .brand .c span:nth-child(even),
+  .device[data-shell=slate] .brand .c span:nth-child(even) { color: #1A1A1A; }
+
+  .controls {
+    display: flex; justify-content: space-between; align-items: center;
+    margin: 22px 4px 0 0;
+  }
+  .dpad { position: relative; width: 112px; height: 112px; }
+  .dpad::before {
+    content: ""; position: absolute; inset: -8px; border-radius: 50%;
+    background: color-mix(in srgb, var(--shell) 80%, #000); opacity: .35;
+  }
+  .dpad button {
+    position: absolute; width: 38px; height: 38px;
+    background: #2a2930; border: 0; padding: 0;
+    color: #5e5c68; font-size: 13px;
+    cursor: pointer;
+    box-shadow: inset 0 -3px 0 #111;
+  }
+  .dpad button:active, .dpad button.pressed { background: #3a3842; box-shadow: none; transform: translateY(1px); }
+  .dpad .up    { left: 37px; top: 0;    border-radius: 6px 6px 0 0; }
+  .dpad .down  { left: 37px; bottom: 0; border-radius: 0 0 6px 6px; }
+  .dpad .left  { left: 0;    top: 37px; border-radius: 6px 0 0 6px; }
+  .dpad .right { right: 0;   top: 37px; border-radius: 0 6px 6px 0; }
+  .dpad .hub   { position: absolute; left: 37px; top: 37px; width: 38px; height: 38px; background: #2a2930; }
+  .dpad .hub::after {
+    content: ""; position: absolute; inset: 11px; border-radius: 50%;
+    background: radial-gradient(circle at 40% 40%, #3a3842, #1c1b21);
+  }
+
+  .ab {
+    display: flex; gap: 14px; transform: rotate(-25deg); margin-right: 4px;
+    padding: 8px 10px; border-radius: 40px;
+    background: color-mix(in srgb, var(--shell) 80%, #000);
+    background: rgba(0,0,0,.14);
+  }
+  .ab div { text-align: center; }
+  .ab button {
+    width: 46px; height: 46px; border-radius: 50%; border: 0;
+    background: radial-gradient(circle at 38% 32%, #6a6878, var(--btn) 60%);
+    cursor: pointer;
+    box-shadow: inset 0 -4px 0 #24232b, 0 2px 3px rgba(0,0,0,.3);
+  }
+  .ab button:active { transform: translateY(2px); box-shadow: inset 0 -1px 0 #24232b; }
+  .ab span { display: block; margin-top: 6px; font-weight: bold; color: var(--shell-ink); font-size: 13px; letter-spacing: .08em; }
+
+  .meta-buttons { display: flex; justify-content: center; gap: 30px; margin-top: 26px; }
+  .meta-buttons div { text-align: center; }
+  .meta-buttons button {
+    width: 30px; height: 30px; border-radius: 50%; border: 0; cursor: pointer;
+    background: radial-gradient(circle at 40% 35%, #6a6878, var(--btn) 65%);
+    box-shadow: inset 0 -3px 0 #24232b;
+  }
+  .meta-buttons button:active { transform: translateY(1px); box-shadow: none; }
+  .meta-buttons span { display: block; margin-top: 5px; font-size: 10px; font-weight: bold; letter-spacing: .1em; color: var(--shell-ink); }
+
+  .speaker {
+    position: absolute; right: 34px; bottom: 30px;
+    display: grid; grid-template-columns: repeat(6, 6px); gap: 5px;
+  }
+  .speaker i { width: 6px; height: 6px; border-radius: 50%; background: rgba(0,0,0,.35); box-shadow: inset 1px 1px 1px rgba(0,0,0,.4); }
+
+  /* ---------- the settings card ---------- */
+  .panel {
+    flex: 1 1 760px; max-width: 900px; min-width: 0;
+    background: var(--panel); border: 1px solid var(--panel-line); border-radius: 12px;
+    padding: 20px;
+  }
+  .panel h1 { margin: 0 0 4px; font-size: 20px; font-weight: 700; color: #fff; }
+  .panel h1 span { color: var(--lime); }
+  .panel .sub { margin: 0 0 18px; color: var(--muted); font-size: 13px; }
+  .row { margin-bottom: 16px; }
+  .row label, .row .lbl {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 13px; font-weight: bold; margin-bottom: 6px;
+  }
+  .row output { color: var(--accent); font-family: "DM Mono", "Courier New", monospace; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  select {
+    width: 100%; padding: 8px 10px; border-radius: 6px; cursor: pointer;
+    background: #2b2b2b; color: var(--text); border: 1px solid #444;
+    font: 500 14px "IBM Plex Sans", sans-serif;
+  }
+  select:focus { outline: 2px solid var(--lime); outline-offset: 1px; }
+  .seg { display: flex; gap: 6px; }
+  .seg button {
+    flex: 1; padding: 7px 0; border-radius: 6px; cursor: pointer;
+    background: #2b2b2b; color: var(--text); border: 1px solid #444; font-weight: 600; font-family: inherit;
+  }
+  .seg button[aria-pressed=true] { background: var(--lime); border-color: var(--lime); color: #1A1A1A; }
+  .swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+  .swatches button {
+    width: 34px; height: 34px; border-radius: 50%; cursor: pointer;
+    border: 2px solid transparent; outline: 0;
+    box-shadow: inset 0 -3px 0 rgba(0,0,0,.25);
+  }
+  .swatches button[aria-pressed=true] { border-color: #fff; box-shadow: 0 0 0 2px var(--accent), inset 0 -3px 0 rgba(0,0,0,.25); }
+  .toggle {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 13px; font-weight: bold;
+  }
+  .switch {
+    width: 46px; height: 24px; border-radius: 12px; border: 0; cursor: pointer;
+    background: #44464d; position: relative; transition: background .15s;
+  }
+  .switch::after {
+    content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px;
+    border-radius: 50%; background: #ddd; transition: left .15s;
+  }
+  .switch[aria-checked=true] { background: var(--lime-dark); }
+  .switch[aria-checked=true]::after { left: 25px; background: #fff; }
+  .hint { font-size: 12px; color: var(--muted); line-height: 1.55; margin: 6px 0 0; }
+  .keys { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--panel-line); font-size: 12px; color: var(--muted); line-height: 1.8; }
+  kbd {
+    font-family: "DM Mono", "Courier New", monospace; font-size: 11px; color: var(--text);
+    background: #2b2d33; border: 1px solid #44464d; border-bottom-width: 2px;
+    border-radius: 4px; padding: 0 5px;
+  }
+  .group { padding: 14px 0 4px; border-top: 1px solid var(--panel-line); }
+  .group h2 {
+    margin: 0 0 12px; font-size: 11px; font-weight: 600; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--lime);
+  }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; }
+  @media (max-width: 1100px) { .cols { grid-template-columns: 1fr; } }
+  @media (max-width: 1100px) { .panel { flex-basis: 380px; } }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; }
+  .sub-lbl { display: flex; justify-content: space-between; font-size: 12px; font-weight: 500; color: var(--muted); margin: 10px 0 6px; }
+  .sub-lbl output { color: var(--lime); font-family: "DM Mono", monospace; }
+  .autopilot { margin-bottom: 16px; }
+  .sub-toggle { margin-top: 12px; font-weight: 500; font-size: 12px; color: var(--text); }
+  .panel .keys { margin-top: 0; padding-top: 14px; border-top: 1px solid var(--panel-line); }
+  @media (max-width: 600px) { .grid2 { grid-template-columns: 1fr; } }
+  .keys-head { color: var(--text); font-weight: 600; font-size: 12px; margin: 10px 0 2px; }
+  .keys-head:first-child { margin-top: 0; }
+  .reset-hi {
+    margin-top: 10px; background: none; border: 0; color: var(--muted);
+    text-decoration: underline; cursor: pointer; font-size: 12px; padding: 0;
+  }
+
+  @media (max-width: 420px) {
+    .device { padding: 18px 14px 30px; }
+    .bezel { padding: 12px 12px 14px 26px; }
+    .power-led { left: 9px; }
+    .speaker { right: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<main class="device" id="device" data-shell="wlanpros" aria-label="Pocket Snake Color handheld">
+  <div class="bezel">
+    <div class="power-led" id="led"></div>
+    <div class="screen" id="screen">
+      <div class="hud"><span id="score">SCORE 0</span><span id="auto" hidden>AUTOPILOT</span><span id="hi">HI 0</span></div>
+      <canvas id="board" width="800" height="800"></canvas>
+      <div class="overlay" id="overlay">
+        <div class="big" id="ovTitle">SNAKE</div>
+        <div class="small" id="ovText">PRESS START</div>
+      </div>
+    </div>
+    <div class="bezel-brand"><img src="wlanpros-logo-white.svg" alt="WLAN Pros"></div>
+  </div>
+  <div class="brand">Pocket Snake<span class="c"><span>C</span><span>O</span><span>L</span><span>O</span><span>R</span></span></div>
+
+  <div class="controls">
+    <div class="dpad">
+      <button class="up"    data-dir="up"    aria-label="Up">▲</button>
+      <button class="left"  data-dir="left"  aria-label="Left">◀</button>
+      <div class="hub"></div>
+      <button class="right" data-dir="right" aria-label="Right">▶</button>
+      <button class="down"  data-dir="down"  aria-label="Down">▼</button>
+    </div>
+    <div class="ab">
+      <div><button id="btnB" aria-label="B: toggle music"></button><span>B</span></div>
+      <div><button id="btnA" aria-label="A: start or pause"></button><span>A</span></div>
+    </div>
+  </div>
+
+  <div class="meta-buttons">
+    <div><button id="btnSelect" aria-label="Select: toggle mouse steering"></button><span>SELECT</span></div>
+    <div><button id="btnStart" aria-label="Start or pause"></button><span>START</span></div>
+  </div>
+
+  <div class="speaker" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+</main>
+
+<aside class="panel" aria-label="Settings">
+  <h1><span>▍</span>Settings</h1>
+  <p class="sub">Changing the board size starts a new game.</p>
+
+  <div class="cols">
+  <div class="col">
+  <section class="group">
+    <h2>Look</h2>
+    <div class="row">
+      <div class="lbl">Shell color <output id="shellOut">WLAN Pros</output></div>
+      <div class="swatches" id="shells">
+        <button data-shell="wlanpros" data-name="WLAN Pros"     style="background:#2b2b2b;box-shadow:inset 0 0 0 3px #A1CC3A" aria-label="WLAN Pros"></button>
+        <button data-shell="lime"     data-name="Lime"          style="background:#A1CC3A" aria-label="Lime"></button>
+        <button data-shell="slate"    data-name="Slate"         style="background:#5B8DB8" aria-label="Slate"></button>
+        <button data-shell="white"    data-name="White"         style="background:#F7F7F5" aria-label="White"></button>
+        <button data-shell="grape"    data-name="Grape"         style="background:#6a4c9c" aria-label="Grape"></button>
+        <button data-shell="atomic"   data-name="Atomic Purple" style="background:linear-gradient(135deg,rgba(140,110,200,.9),rgba(70,48,120,.9))" aria-label="Atomic Purple"></button>
+      </div>
+    </div>
+  </section>
+
+  <section class="group">
+    <h2>Game</h2>
+    <div class="grid2">
+      <div class="row">
+        <label for="speed">Speed <output id="speedOut">5</output></label>
+        <input type="range" id="speed" min="1" max="10" step="1" value="5">
+      </div>
+      <div class="row">
+        <div class="lbl">Board size <output id="sizeOut">20 × 20</output></div>
+        <div class="seg" id="sizes">
+          <button data-size="12">S</button>
+          <button data-size="16">M</button>
+          <button data-size="20" aria-pressed="true">L</button>
+          <button data-size="28">XL</button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="toggle">Path hint <button class="switch" id="hint" role="switch" aria-checked="true" aria-label="Path hint"></button></div>
+        <p class="hint">A dashed line shows the shortest safe route from the head to the apple.</p>
+      </div>
+      <div class="row">
+        <div class="toggle">Mouse steering <button class="switch" id="mouse" role="switch" aria-checked="true" aria-label="Mouse steering"></button></div>
+        <p class="hint">The snake turns toward the pointer while it is over the screen.</p>
+      </div>
+    </div>
+    <div class="autopilot">
+      <div class="toggle">Autopilot <button class="switch" id="autopilot" role="switch" aria-checked="true" aria-label="Autopilot"></button></div>
+      <label for="autoSecs" class="sub-lbl">Takes over after this long with no control pressed <output id="autoOut">3 s</output></label>
+      <input type="range" id="autoSecs" min="1" max="5" step="1" value="3">
+      <div class="toggle sub-toggle">Count autopilot games toward the high score <button class="switch" id="autoCounts" role="switch" aria-checked="false" aria-label="Count autopilot games toward the high score"></button></div>
+      <p class="hint">Press any control to take back over. With counting off, a game the autopilot played any part of can't set the high score.</p>
+    </div>
+  </section>
+
+  </div>
+  <div class="col">
+  <section class="group">
+    <h2>Sound</h2>
+    <div class="grid2">
+      <div class="row">
+        <div class="toggle">Background music <button class="switch" id="music" role="switch" aria-checked="false" aria-label="Background music"></button></div>
+        <label for="track" class="sub-lbl">Music track</label>
+        <select id="track"></select>
+      </div>
+      <div class="row">
+        <label for="volume">Master volume <output id="volOut">60%</output></label>
+        <input type="range" id="volume" min="0" max="100" step="1" value="60">
+      </div>
+      <div class="row">
+        <div class="toggle">Apple beep <button class="switch" id="beep" role="switch" aria-checked="false" aria-label="Apple beep"></button></div>
+        <p class="hint">A blip each time the snake eats.</p>
+      </div>
+      <div class="row">
+        <label for="sfxVol">Effects volume <output id="sfxOut">50%</output></label>
+        <input type="range" id="sfxVol" min="0" max="100" step="1" value="50">
+        <p class="hint">The apple beep and the game-over sound.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="group keys">
+    <h2>Controls</h2>
+    <div class="grid2">
+      <div>
+        <div class="keys-head">Keyboard</div>
+        <kbd>←↑↓→</kbd> or <kbd>WASD</kbd> steer<br>
+        <kbd>Space</kbd> / <kbd>Enter</kbd> start and pause<br>
+        <kbd>M</kbd> music on / off<br>
+        <kbd>N</kbd> next track<br>
+        <kbd>H</kbd> path hint on / off
+      </div>
+      <div>
+        <div class="keys-head">Handheld buttons</div>
+        <kbd>D-pad</kbd> steer<br>
+        <kbd>A</kbd> / <kbd>START</kbd> start and pause<br>
+        <kbd>B</kbd> music on / off<br>
+        <kbd>SELECT</kbd> mouse steering on / off
+      </div>
+    </div>
+  </section>
+  <button class="reset-hi" id="resetHi">Reset high score</button>
+  </div>
+  </div>
+</aside>
+
+<script>
+(() => {
+  // ---------- storage (works without it: private windows can throw) ----------
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+  };
+
+  // ---------- elements ----------
+  const $ = id => document.getElementById(id);
+  const canvas = $('board'), ctx = canvas.getContext('2d');
+  const scoreEl = $('score'), hiEl = $('hi'), led = $('led');
+  const overlay = $('overlay'), ovTitle = $('ovTitle'), ovText = $('ovText');
+  const COLORS = { bg: '#F7F7F5', grid: '#EDEFE6', head: '#2F5E00', neck: [122, 158, 38], tail: [161, 204, 58], apple: '#C0392B', shine: '#F08A7E', leaf: '#7A9E26', stem: '#5a4632', eye: '#ffffff', pupil: '#1A1A1A' };
+
+  // ---------- settings ----------
+  const settings = Object.assign({ speed: 5, size: 20, volume: 60, mouse: true, shell: 'wlanpros', hint: true, track: 0, auto: true, autoSecs: 3, autoCounts: false, beep: false, sfxVolume: 50 }, store.get('snake.settings', {}));
+  let speed = settings.speed, size = settings.size, mouseSteer = settings.mouse, shell = settings.shell, showHint = settings.hint, autoOn = settings.auto, autoSecs = Math.min(5, Math.max(1, settings.autoSecs)), beepOn = settings.beep, sfxVolume = settings.sfxVolume, autoCounts = settings.autoCounts;
+  const saveSettings = () => store.set('snake.settings', { speed, size, volume: +$('volume').value, mouse: mouseSteer, shell, hint: showHint, track: audio.track, auto: autoOn, autoSecs, autoCounts, beep: beepOn, sfxVolume });
+
+  // ---------- game state ----------
+  const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+  const OPP = { up: 'down', down: 'up', left: 'right', right: 'left' };
+  let snake, dir, queue, food, score, state; // state: 'ready' | 'playing' | 'paused' | 'over'
+  let hi = store.get('snake.hi', 0);
+  let acc = 0, last = 0;
+  // Autopilot: takes over after autoSecs without a human control input.
+  let piloting = false, assisted = false, lastInput = performance.now(), overAt = 0;
+  function humanInput() {
+    lastInput = performance.now();
+    if (piloting) { piloting = false; updateHud(); }
+  }
+
+  const tickMs = () => 230 - speed * 19; // speed 1 = 211 ms, speed 10 = 40 ms
+
+  function reset() {
+    const mid = Math.floor(size / 2);
+    snake = [[mid, mid], [mid - 1, mid], [mid - 2, mid]];
+    dir = 'right'; queue = []; score = 0; assisted = false;
+    placeFood();
+    state = 'ready';
+    showOverlay('SNAKE', 'PRESS START');
+    updateHud(); draw();
+  }
+
+  function placeFood() {
+    const free = [];
+    const taken = new Set(snake.map(([x, y]) => x + ',' + y));
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (!taken.has(x + ',' + y)) free.push([x, y]);
+    food = free.length ? free[Math.floor(Math.random() * free.length)] : null;
+  }
+
+  // Turn requests are queued so two quick key presses both register,
+  // and each is checked against the direction BEFORE it, so the snake
+  // can never reverse into its own neck.
+  function turn(d) {
+    if (state === 'ready') start();
+    if (state !== 'playing') return;
+    const prev = queue.length ? queue[queue.length - 1] : dir;
+    if (d === prev || d === OPP[prev] || queue.length >= 2) return;
+    queue.push(d);
+  }
+
+  function step() {
+    if (piloting) { queue.length = 0; dir = aiMove(); }
+    else steerToPointer();
+    if (queue.length) dir = queue.shift();
+    const [dx, dy] = DIRS[dir];
+    const [hx, hy] = snake[0];
+    const nx = hx + dx, ny = hy + dy;
+    const eating = food && nx === food[0] && ny === food[1];
+    // The tail moves out of the way this tick unless we are growing.
+    const body = eating ? snake : snake.slice(0, -1);
+    if (nx < 0 || ny < 0 || nx >= size || ny >= size || body.some(([x, y]) => x === nx && y === ny)) {
+      return gameOver();
+    }
+    snake.unshift([nx, ny]);
+    if (eating) {
+      score += 1;
+      sfx.eat();
+      placeFood();
+      if (!food) return win();
+    } else {
+      snake.pop();
+    }
+    updateHud();
+  }
+
+  function start(byHuman = true) {
+    if (state === 'over') reset();
+    state = 'playing'; hideOverlay(); led.classList.add('on');
+    if (byHuman) audio.unlock(); // browsers only allow sound after a real click or key
+    last = performance.now(); acc = 0;
+  }
+  function togglePause() {
+    if (state === 'playing') { state = 'paused'; showOverlay('PAUSED', 'PRESS START'); }
+    else start();
+  }
+  // Unless counting is switched on, a game the autopilot played any part of can't set the high score.
+  function recordScore() {
+    const counts = !assisted || autoCounts;
+    const newHi = counts && score > hi;
+    if (newHi) { hi = score; store.set('snake.hi', hi); }
+    piloting = false; overAt = performance.now();
+    updateHud();
+    return newHi ? '<br>NEW HIGH SCORE!' : !counts ? '<br>AUTOPILOT GAME, NOT COUNTED' : '';
+  }
+  function gameOver() {
+    state = 'over'; sfx.die();
+    const note = recordScore();
+    showOverlay('GAME OVER', `SCORE ${score}${note}<br><span class="blink">PRESS START</span>`);
+  }
+  function win() {
+    state = 'over';
+    const note = recordScore();
+    showOverlay('YOU WIN', `BOARD FULL! ${score}${note}<br><span class="blink">PRESS START</span>`);
+  }
+
+  function updateHud() { scoreEl.textContent = 'SCORE ' + score; hiEl.textContent = 'HI ' + hi; $('auto').hidden = !piloting; }
+  function showOverlay(t, html) { ovTitle.innerHTML = [...t].map(ch => ch === ' ' ? ' ' : `<span>${ch}</span>`).join(''); ovText.innerHTML = html; overlay.hidden = false; }
+  function hideOverlay() { overlay.hidden = true; }
+
+  // ---------- drawing ----------
+  function draw() {
+    const c = canvas.width / size;
+    ctx.fillStyle = COLORS.bg; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = COLORS.grid;
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if ((x + y) % 2) ctx.fillRect(x * c, y * c, c, c);
+    if (food) drawApple(food[0] * c + c / 2, food[1] * c + c / 2, c);
+    if (showHint && state !== 'over') drawHint();
+    drawSnake(c);
+  }
+
+  // ---------- the snake: one tapering body, scales, a proper head ----------
+  function drawSnake(c) {
+    const n = snake.length;
+    const ctr = ([x, y]) => [x * c + c / 2, y * c + c / 2];
+    const shade = t => `rgb(${COLORS.neck.map((v, k) => Math.round(v + (COLORS.tail[k] - v) * t))})`;
+    // Full thickness through the body, narrowing over the last few segments to a pointed tail.
+    const taper = Math.max(1, Math.min(6, Math.floor(n / 2))); // short snakes only taper their back half
+    const width = i => { const fromTail = n - 1 - i; return c * 0.76 * (fromTail < taper ? 0.3 + 0.7 * fromTail / taper : 1); };
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+    // pointed tail tip, poking out past the last segment
+    const tail = ctr(snake[n - 1]), beforeTail = ctr(snake[n - 2]);
+    const tx = tail[0] - beforeTail[0], ty = tail[1] - beforeTail[1], tl = Math.hypot(tx, ty) || 1;
+    ctx.strokeStyle = shade(1); ctx.lineWidth = c * 0.14;
+    ctx.beginPath(); ctx.moveTo(...tail); ctx.lineTo(tail[0] + tx / tl * c * 0.42, tail[1] + ty / tl * c * 0.42); ctx.stroke();
+
+    // body, tail first so the neck sits on top
+    for (let i = n - 1; i >= 1; i--) {
+      const a = ctr(snake[i]), b = ctr(snake[i - 1]);
+      ctx.strokeStyle = shade(n > 2 ? (i - 1) / (n - 2) : 0);
+      ctx.lineWidth = width(i);
+      ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke();
+    }
+    // a lighter belly sheen down the middle
+    ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = c * 0.12;
+    ctx.beginPath(); ctx.moveTo(...ctr(snake[n - 1]));
+    for (let i = n - 2; i >= 0; i--) ctx.lineTo(...ctr(snake[i]));
+    ctx.stroke();
+    // diamond scale pattern on every other segment
+    for (let i = 1; i < n - 1; i += 2) {
+      const [x, y] = ctr(snake[i]), [px, py] = ctr(snake[i - 1]);
+      const ang = Math.atan2(py - y, px - x), r = width(i) * 0.3;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+      ctx.fillStyle = 'rgba(31, 70, 0, .45)';
+      ctx.beginPath(); ctx.moveTo(r * 1.2, 0); ctx.lineTo(0, r); ctx.lineTo(-r * 1.2, 0); ctx.lineTo(0, -r); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+
+    // head: an oval pointing the way it is going
+    const [hx, hy] = ctr(snake[0]), [dx, dy] = DIRS[dir];
+    ctx.save(); ctx.translate(hx, hy); ctx.rotate(Math.atan2(dy, dx));
+    // tongue flicks out now and then
+    if (state !== 'playing' || Math.floor(performance.now() / 350) % 3 === 0) {
+      ctx.strokeStyle = COLORS.apple; ctx.lineWidth = c * 0.05;
+      ctx.beginPath();
+      ctx.moveTo(c * 0.4, 0); ctx.lineTo(c * 0.78, 0);
+      ctx.moveTo(c * 0.78, 0); ctx.lineTo(c * 0.92, -c * 0.09);
+      ctx.moveTo(c * 0.78, 0); ctx.lineTo(c * 0.92, c * 0.09);
+      ctx.stroke();
+    }
+    const g = ctx.createRadialGradient(c * 0.05, -c * 0.12, c * 0.05, 0, 0, c * 0.55);
+    g.addColorStop(0, '#4f8a12'); g.addColorStop(1, COLORS.head);
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.ellipse(c * 0.06, 0, c * 0.5, c * 0.42, 0, 0, Math.PI * 2); ctx.fill();
+    for (const side of [-1, 1]) {
+      ctx.fillStyle = '#F2E94E'; // yellow eye with a slit pupil
+      ctx.beginPath(); ctx.ellipse(c * 0.16, side * c * 0.2, c * 0.12, c * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = COLORS.pupil;
+      ctx.beginPath(); ctx.ellipse(c * 0.19, side * c * 0.2, c * 0.03, c * 0.085, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(c * 0.46, side * c * 0.08, c * 0.025, 0, Math.PI * 2); ctx.fill(); // nostril
+    }
+    ctx.restore();
+  }
+
+  // ---------- the apple: two shoulders, a dimple, a stem and a leaf ----------
+  function drawApple(cx, cy, c) {
+    const r = c * 0.36;
+    cy += c * 0.06;
+    ctx.fillStyle = 'rgba(0,0,0,.12)'; // shadow
+    ctx.beginPath(); ctx.ellipse(cx, cy + r * 0.98, r * 0.75, r * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+    const g = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.3, r * 0.1, cx, cy, r * 1.15);
+    g.addColorStop(0, '#ff6f61'); g.addColorStop(0.55, COLORS.apple); g.addColorStop(1, '#7d1d12');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - r * 0.62);
+    ctx.bezierCurveTo(cx + r * 0.25, cy - r * 0.98, cx + r * 1.08, cy - r * 0.88, cx + r * 1.0, cy - r * 0.05);
+    ctx.bezierCurveTo(cx + r * 0.98, cy + r * 0.62, cx + r * 0.55, cy + r * 1.02, cx + r * 0.22, cy + r * 0.95);
+    ctx.quadraticCurveTo(cx, cy + r * 0.84, cx - r * 0.22, cy + r * 0.95);
+    ctx.bezierCurveTo(cx - r * 0.55, cy + r * 1.02, cx - r * 0.98, cy + r * 0.62, cx - r * 1.0, cy - r * 0.05);
+    ctx.bezierCurveTo(cx - r * 1.08, cy - r * 0.88, cx - r * 0.25, cy - r * 0.98, cx, cy - r * 0.62);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.55)'; // shine
+    ctx.beginPath(); ctx.ellipse(cx - r * 0.48, cy - r * 0.28, r * 0.13, r * 0.26, -0.45, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = COLORS.stem; ctx.lineWidth = r * 0.13; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(cx, cy - r * 0.55); ctx.quadraticCurveTo(cx - r * 0.02, cy - r * 0.95, cx + r * 0.14, cy - r * 1.12); ctx.stroke();
+    const lx = cx + r * 0.08, ly = cy - r * 0.88; // leaf
+    ctx.fillStyle = COLORS.leaf;
+    ctx.beginPath(); ctx.moveTo(lx, ly);
+    ctx.quadraticCurveTo(lx + r * 0.35, ly - r * 0.45, lx + r * 0.82, ly - r * 0.3);
+    ctx.quadraticCurveTo(lx + r * 0.45, ly + r * 0.08, lx, ly);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(47, 94, 0, .8)'; ctx.lineWidth = r * 0.05;
+    ctx.beginPath(); ctx.moveTo(lx, ly); ctx.quadraticCurveTo(lx + r * 0.4, ly - r * 0.2, lx + r * 0.78, ly - r * 0.29); ctx.stroke();
+  }
+
+  // Shortest route from the head to the apple, by breadth-first search.
+  // It knows the body moves: the segment i places from the head leaves its
+  // cell after (length - i) steps, so a cell the tail is about to vacate
+  // counts as free by the time the head would get there.
+  function findPath() { return food ? bfs(snake, food) : null; }
+
+  function bfs(body, target) {
+    const n = body.length;
+    const freeAt = new Map();
+    body.forEach(([x, y], i) => freeAt.set(x + ',' + y, n - i));
+    const start = body[0];
+    const prev = new Map([[start[0] + ',' + start[1], null]]);
+    let frontier = [start], dist = 0;
+    while (frontier.length) {
+      dist++;
+      const next = [];
+      for (const [x, y] of frontier) {
+        for (const [dx, dy] of Object.values(DIRS)) {
+          const nx = x + dx, ny = y + dy, k = nx + ',' + ny;
+          if (nx < 0 || ny < 0 || nx >= size || ny >= size || prev.has(k)) continue;
+          if (freeAt.has(k) && freeAt.get(k) > dist) continue;
+          prev.set(k, x + ',' + y);
+          if (nx === target[0] && ny === target[1]) {
+            const path = [];
+            for (let c = k; c; c = prev.get(c)) path.push(c.split(',').map(Number));
+            return path.reverse();
+          }
+          next.push([nx, ny]);
+        }
+      }
+      frontier = next;
+    }
+    return null; // boxed in: no route right now
+  }
+
+  // ---------- autopilot brain ----------
+  // 1. Take the shortest route to the apple, but only if, after eating it,
+  //    the snake could still reach its own tail (so it never seals itself in).
+  // 2. Otherwise stall safely: pick the move that keeps the tail reachable
+  //    and leaves the most open space.
+  function aiMove() {
+    const n = snake.length, head = snake[0];
+    if (food) {
+      const p = bfs(snake, food);
+      if (p) {
+        const after = p.slice(1).reverse().concat(snake).slice(0, n + 1);
+        if (bfs(after, after[after.length - 1])) return dirBetween(head, p[1]);
+      }
+    }
+    let best = dir, bestScore = -1;
+    for (const d of Object.keys(DIRS)) {
+      if (d === OPP[dir]) continue;
+      const nx = head[0] + DIRS[d][0], ny = head[1] + DIRS[d][1];
+      if (nx < 0 || ny < 0 || nx >= size || ny >= size) continue;
+      if (snake.slice(0, -1).some(([x, y]) => x === nx && y === ny)) continue;
+      const moved = [[nx, ny]].concat(snake.slice(0, -1));
+      const space = openSpace(moved);
+      const score = (bfs(moved, moved[moved.length - 1]) ? 1e4 : 0) + space;
+      if (score > bestScore) { bestScore = score; best = d; }
+    }
+    return best;
+  }
+  function dirBetween(a, b) {
+    return b[0] > a[0] ? 'right' : b[0] < a[0] ? 'left' : b[1] > a[1] ? 'down' : 'up';
+  }
+  function openSpace(body) { // cells reachable from the head, body treated as walls
+    const blocked = new Set(body.slice(1).map(([x, y]) => x + ',' + y));
+    const seen = new Set([body[0].join(',')]);
+    const stack = [body[0]];
+    while (stack.length) {
+      const [x, y] = stack.pop();
+      for (const [dx, dy] of Object.values(DIRS)) {
+        const nx = x + dx, ny = y + dy, k = nx + ',' + ny;
+        if (nx < 0 || ny < 0 || nx >= size || ny >= size || seen.has(k) || blocked.has(k)) continue;
+        seen.add(k); stack.push([nx, ny]);
+      }
+    }
+    return seen.size;
+  }
+
+  function drawHint() {
+    const path = findPath();
+    if (!path || path.length < 2) return;
+    const c = canvas.width / size;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(91, 141, 184, .38)'; // WLAN Pros slate, kept faint
+    ctx.lineWidth = Math.max(2, c * 0.08);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.setLineDash([c * 0.16, c * 0.5]);
+    ctx.beginPath();
+    path.forEach(([x, y], i) => ctx[i ? 'lineTo' : 'moveTo'](x * c + c / 2, y * c + c / 2));
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); ctx.fill();
+  }
+
+  function loop(t) {
+    if (autoOn && t - lastInput > autoSecs * 1000) {
+      if (state === 'playing' && !piloting) { piloting = true; assisted = true; updateHud(); }
+      else if (state === 'ready' || (state === 'over' && t - overAt > 3000)) {
+        piloting = true; start(false); assisted = true; updateHud();
+      }
+    }
+    if (state === 'playing') {
+      acc += t - last;
+      const ms = tickMs();
+      while (acc >= ms && state === 'playing') { step(); acc -= ms; }
+      draw();
+    }
+    last = t;
+    requestAnimationFrame(loop);
+  }
+
+  // ---------- audio: chiptune tracks played live with Web Audio ----------
+  // Lead uses narrow pulse waves (12.5%, 25%, 50%), the sound of a Game Boy
+  // square channel; bass is a triangle; drums are filtered noise.
+  // Note grammar: one token per eighth note. "C#5" plays, "_" holds the
+  // previous note, "." is a rest, "|" is just a bar line for readability.
+  const TRACKS = [
+    { name: 'Pocket Overture', bpm: 132, lead: 'pulse50', leadVol: .11,
+      notes: `A4 . C5 D5 E5 . D5 C5 | B4 . C5 D5 C5 . A4 . | A4 . C5 E5 G5 . F5 E5 | D5 . E5 C5 A4 . . .`,
+      bass:  `A2 . E3 . A2 . E3 . | G2 . D3 . G2 . D3 . | F2 . C3 . F2 . C3 . | E2 . B2 . A2 . E3 .`,
+      drums: `..h.` },
+    { name: 'Overworld Dash', bpm: 150, lead: 'pulse25', leadVol: .12,
+      notes: `C5 . E5 G5 C6 . G5 E5 | F5 . A5 C6 A5 . F5 . | G5 . B5 D6 G5 . F5 E5 | D5 E5 F5 D5 G5 _ . . |
+              E5 . G5 C6 E6 . D6 C6 | A5 . C6 A5 F5 . A5 . | G5 F5 E5 D5 C5 . G4 . | C5 _ _ . . . . .`,
+      bass:  `C3 . G2 . C3 . G2 . | F2 . C3 . F2 . C3 . | G2 . D3 . G2 . D3 . | G2 . B2 . G2 . B2 . |
+              C3 . G2 . C3 . G2 . | F2 . C3 . F2 . C3 . | G2 . D3 . G2 . B2 . | C3 . G2 . C3 . . .`,
+      drums: `khshkhsh` },
+    { name: 'Korobeiniki (folk song)', bpm: 144, lead: 'pulse25', leadVol: .12,
+      notes: `E5 _ B4 C5 D5 _ C5 B4 | A4 _ A4 C5 E5 _ D5 C5 | B4 _ _ C5 D5 _ E5 _ | C5 _ A4 _ A4 _ . . |
+              . D5 _ F5 A5 _ G5 F5 | E5 _ _ C5 E5 _ D5 C5 | B4 _ B4 C5 D5 _ E5 _ | C5 _ A4 _ A4 _ . .`,
+      bass:  `E2 E3 E2 E3 E2 E3 E2 E3 | A2 A3 A2 A3 A2 A3 A2 A3 | G#2 G#3 G#2 G#3 G#2 G#3 G#2 G#3 | A2 A3 A2 A3 A2 A3 A2 A3 |
+              D2 D3 D2 D3 D2 D3 D2 D3 | C2 C3 C2 C3 C2 C3 C2 C3 | B1 B2 B1 B2 E2 E3 E2 E3 | A2 A3 A2 A3 A2 A3 . .`,
+      drums: `khshkhsh` },
+    { name: 'Hall of the Mountain King (Grieg)', bpm: 116, accel: 10, maxBpm: 230, gate: .55, lead: 'pulse50', leadVol: .11,
+      notes: `B4 C#5 D5 E5 F#5 D5 F#5 _ | F5 C#5 F5 _ E5 C5 E5 _ | B4 C#5 D5 E5 F#5 D5 F#5 B5 | A5 F#5 D5 F#5 A5 _ _ _`,
+      bass:  `B2 . F#2 . B2 . F#2 . | C#2 . G#2 . C2 . G2 . | B2 . F#2 . B2 . F#2 . | F#2 . C#3 . F#2 . . .`,
+      drums: `k.h.k.h.` },
+    { name: 'Dungeon Crawl', bpm: 100, lead: 'pulse12', leadVol: .10,
+      notes: `D4 F4 A4 D5 A4 F4 D4 F4 | Bb3 D4 F4 Bb4 F4 D4 Bb3 D4 | C4 E4 G4 C5 G4 E4 C4 E4 | A3 C#4 E4 A4 E4 C#4 A3 C#4`,
+      bass:  `D2 _ _ _ _ _ _ _ | Bb1 _ _ _ _ _ _ _ | C2 _ _ _ _ _ _ _ | A1 _ _ _ _ _ _ _`,
+      drums: `k...h...k...h.h.` },
+    { name: 'Boss Fight', bpm: 170, lead: 'pulse25', leadVol: .11,
+      notes: `E5 . E5 G5 . E5 A5 G5 | E5 . E5 B5 . A5 G5 F#5 | E5 . E5 G5 . E5 A5 C6 | B5 A5 G5 F#5 E5 _ D#5 _`,
+      bass:  `E2 E2 E3 E2 E2 E3 E2 E3 | E2 E2 E3 E2 E2 E3 E2 E3 | C2 C2 C3 C2 C2 C3 C2 C3 | B1 B1 B2 B1 B1 B2 B1 B2`,
+      drums: `khskkhsh` },
+    { name: 'Snowy Village', bpm: 96, lead: 'pulse25', leadVol: .09,
+      notes: `A4 _ C5 _ F5 _ E5 D5 | C5 _ _ _ A4 _ _ _ | Bb4 _ D5 _ G5 _ F5 E5 | F5 _ _ _ _ _ _ _ |
+              A4 _ C5 _ F5 _ A5 G5 | F5 _ D5 _ C5 _ A4 _ | G4 _ Bb4 _ E5 _ D5 C5 | F4 _ _ _ _ _ _ _`,
+      bass:  `F2 _ C3 _ F2 _ C3 _ | F2 _ C3 _ F2 _ C3 _ | Bb1 _ F2 _ Bb1 _ F2 _ | C2 _ G2 _ C2 _ G2 _ |
+              F2 _ C3 _ F2 _ C3 _ | D2 _ A2 _ D2 _ A2 _ | C2 _ G2 _ C2 _ G2 _ | F2 _ C3 _ F2 _ _ _`,
+      drums: `....h...` },
+  ];
+
+  const SEMI = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  function noteFreq(tok) {
+    const m = /^([A-G])([#b]?)(\d)$/.exec(tok);
+    const midi = 12 * (+m[3] + 1) + SEMI[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0);
+    return 440 * Math.pow(2, (midi - 69) / 12);
+  }
+  function parse(str) {
+    const t = str.split(/\s+/).filter(x => x && x !== '|');
+    return t.map((tok, i) => {
+      if (tok === '.' || tok === '_') return null;
+      let len = 1; while (t[i + len] === '_') len++;
+      return { f: noteFreq(tok), len };
+    });
+  }
+  TRACKS.forEach(tr => { tr.lead_ = parse(tr.notes); tr.bass_ = parse(tr.bass); });
+
+  const audio = (() => {
+    let ac = null, master = null, musicGain = null, sfxGain = null, noise = null, waves = {};
+    let timer = null, nextTime = 0, stepIdx = 0, on = false, track = 0, bpm = 120;
+
+    function ensure() {
+      if (ac) return;
+      ac = new (window.AudioContext || window.webkitAudioContext)();
+      master = ac.createGain(); master.connect(ac.destination);
+      musicGain = ac.createGain(); musicGain.gain.value = 0.55; musicGain.connect(master);
+      sfxGain = ac.createGain(); sfxGain.connect(master); setSfxVolume(sfxVolume);
+      // pulse waves at Game Boy duty cycles, built from their Fourier series
+      for (const [name, duty] of [['pulse12', .125], ['pulse25', .25], ['pulse50', .5]]) {
+        const N = 64, real = new Float32Array(N), imag = new Float32Array(N);
+        for (let k = 1; k < N; k++) real[k] = (2 / (k * Math.PI)) * Math.sin(k * Math.PI * duty);
+        waves[name] = ac.createPeriodicWave(real, imag);
+      }
+      noise = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+      const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      setVolume(+$('volume').value);
+    }
+    function tone(freq, t, dur, type, out, peak) {
+      const o = ac.createOscillator(), g = ac.createGain();
+      if (waves[type]) o.setPeriodicWave(waves[type]); else o.type = type;
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(peak, t + 0.008);
+      g.gain.setValueAtTime(peak, t + Math.max(0.01, dur * 0.6));
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(out);
+      o.start(t); o.stop(t + dur + 0.02);
+    }
+    function hit(kind, t) {
+      if (kind === 'k') { // kick: a fast pitch drop
+        const o = ac.createOscillator(), g = ac.createGain();
+        o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.12);
+        g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+        o.connect(g); g.connect(musicGain); o.start(t); o.stop(t + 0.16);
+        return;
+      }
+      const src = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+      src.buffer = noise;
+      const snare = kind === 's';
+      f.type = snare ? 'bandpass' : 'highpass'; f.frequency.value = snare ? 1800 : 7000;
+      const len = snare ? 0.13 : 0.035;
+      g.gain.setValueAtTime(snare ? 0.35 : 0.12, t); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      src.connect(f); f.connect(g); g.connect(musicGain);
+      src.start(t, Math.random() * 0.5); src.stop(t + len + 0.02);
+    }
+    function schedule() {
+      const tr = TRACKS[track];
+      while (nextTime < ac.currentTime + 0.12) {
+        const step = 60 / bpm / 2;
+        const l = tr.lead_[stepIdx], b = tr.bass_[stepIdx % tr.bass_.length];
+        const d = tr.drums[stepIdx % tr.drums.length];
+        if (l) tone(l.f, nextTime, step * l.len * (tr.gate || .9), tr.lead, musicGain, tr.leadVol);
+        if (b) tone(b.f, nextTime, step * b.len * .95, 'triangle', musicGain, 0.32);
+        if (d !== '.') hit(d, nextTime);
+        nextTime += step;
+        stepIdx++;
+        if (stepIdx >= tr.lead_.length) { // loop; the Mountain King gets faster every time round
+          stepIdx = 0;
+          if (tr.accel) bpm = Math.min(tr.maxBpm, bpm + tr.accel);
+        }
+      }
+    }
+    function restart() {
+      bpm = TRACKS[track].bpm; stepIdx = 0;
+      nextTime = ac.currentTime + 0.06;
+      clearInterval(timer); timer = setInterval(schedule, 25); schedule();
+    }
+    function setVolume(v) { if (master) master.gain.value = Math.pow(v / 100, 1.6); }
+    function setSfxVolume(v) { if (sfxGain) sfxGain.gain.value = Math.pow(v / 100, 1.6) * 1.4; }
+    return {
+      tracks: TRACKS.map(t => t.name),
+      unlock() { ensure(); if (ac.state === 'suspended') ac.resume(); },
+      setVolume,
+      get on() { return on; },
+      get track() { return track; },
+      setTrack(i) {
+        track = ((i % TRACKS.length) + TRACKS.length) % TRACKS.length;
+        if (on) restart();
+      },
+      setMusic(v) {
+        on = v;
+        if (v) { ensure(); ac.resume(); restart(); }
+        else { clearInterval(timer); timer = null; }
+      },
+      setSfxVolume,
+      blip(freqs, type = 'square', peak = 0.18) {
+        if (!ac) return;
+        let t = ac.currentTime;
+        freqs.forEach(([f, d]) => { tone(f, t, d, type, sfxGain, peak); t += d * 0.8; });
+      }
+    };
+  })();
+  // A soft two-note sine 'bloop': lower, rounder and quieter than a square-wave beep.
+  const softBeep = () => audio.blip([[523, 0.11], [784, 0.16]], 'sine', 0.12);
+  const sfx = {
+    eat: () => { if (beepOn) softBeep(); },
+    // A gentle falling three-note sigh (G, E, C) in sine, instead of a harsh sawtooth buzz.
+    die: () => audio.blip([[392, 0.16], [330, 0.16], [262, 0.34]], 'sine', 0.13)
+  };
+
+  // ---------- input: keyboard ----------
+  const KEYMAP = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
+                   w: 'up', s: 'down', a: 'left', d: 'right', W: 'up', S: 'down', A: 'left', D: 'right' };
+  document.addEventListener('keydown', e => {
+    if (/^(Arrow|[wasdWASD ]$|Enter$|[mnhMNH]$)/.test(e.key)) humanInput();
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') { if (!KEYMAP[e.key]) return; e.target.blur(); }
+    if (KEYMAP[e.key]) { e.preventDefault(); turn(KEYMAP[e.key]); flashPad(KEYMAP[e.key]); }
+    else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); state === 'ready' || state === 'over' ? start() : togglePause(); }
+    else if (e.key === 'm' || e.key === 'M') setMusic(!audio.on);
+    else if (e.key === 'n' || e.key === 'N') { pickTrack(audio.track + 1); setMusic(true); }
+    else if (e.key === 'h' || e.key === 'H') setHint(!showHint);
+  });
+
+  // ---------- input: mouse steering over the screen ----------
+  // The pointer is a target. Every step the snake turns toward it along
+  // whichever axis is further away, so holding the pointer still keeps it coming.
+  let pointer = null; // [x, y] in cells, or null when the pointer is off the screen
+  $('screen').addEventListener('pointermove', e => {
+    const r = canvas.getBoundingClientRect();
+    const c = r.width / size;
+    pointer = [(e.clientX - r.left) / c, (e.clientY - r.top) / c];
+    if (mouseSteer) humanInput(); // moving the pointer is steering
+  });
+  $('screen').addEventListener('pointerleave', () => { pointer = null; });
+
+  function steerToPointer() {
+    if (!mouseSteer || !pointer || queue.length) return;
+    const [hx, hy] = snake[0];
+    const dx = pointer[0] - (hx + 0.5), dy = pointer[1] - (hy + 0.5);
+    if (Math.abs(dx) < 0.6 && Math.abs(dy) < 0.6) return; // already there
+    const horiz = dx > 0 ? 'right' : 'left', vert = dy > 0 ? 'down' : 'up';
+    const [major, minor] = Math.abs(dx) > Math.abs(dy) ? [horiz, vert] : [vert, horiz];
+    // Prefer the bigger axis; if that would be a reversal, take the other.
+    const want = major !== OPP[dir] ? major : minor;
+    if (want !== dir) queue.push(want);
+  }
+  $('screen').addEventListener('click', () => { humanInput(); if (state !== 'playing') start(); });
+
+  // ---------- input: on-device buttons ----------
+  document.querySelectorAll('.dpad button').forEach(b =>
+    b.addEventListener('pointerdown', e => { e.preventDefault(); humanInput(); turn(b.dataset.dir); }));
+  function flashPad(d) {
+    const b = document.querySelector(`.dpad [data-dir=${d}]`);
+    b.classList.add('pressed'); setTimeout(() => b.classList.remove('pressed'), 90);
+  }
+  const startPause = () => { humanInput(); (state === 'ready' || state === 'over') ? start() : togglePause(); };
+  $('btnStart').addEventListener('click', startPause);
+  $('btnA').addEventListener('click', startPause);
+  $('btnB').addEventListener('click', () => { humanInput(); setMusic(!audio.on); });
+  $('btnSelect').addEventListener('click', () => { humanInput(); setMouse(!mouseSteer); });
+
+  // ---------- settings panel ----------
+  const speedEl = $('speed');
+  speedEl.value = speed; $('speedOut').textContent = speed;
+  speedEl.addEventListener('input', () => { speed = +speedEl.value; $('speedOut').textContent = speed; saveSettings(); });
+
+  function setSize(s) {
+    size = s;
+    document.querySelectorAll('#sizes button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.size === s));
+    $('sizeOut').textContent = `${s} × ${s}`;
+    saveSettings(); reset();
+  }
+  document.querySelectorAll('#sizes button').forEach(b => b.addEventListener('click', () => setSize(+b.dataset.size)));
+
+  const volEl = $('volume');
+  volEl.value = settings.volume; $('volOut').textContent = settings.volume + '%';
+  volEl.addEventListener('input', () => { $('volOut').textContent = volEl.value + '%'; audio.setVolume(+volEl.value); saveSettings(); });
+
+  function setMusic(v) { audio.setMusic(v); $('music').setAttribute('aria-checked', v); }
+  const trackEl = $('track');
+  audio.tracks.forEach((name, i) => trackEl.add(new Option(name, i)));
+  function pickTrack(i) { audio.setTrack(i); trackEl.value = audio.track; saveSettings(); }
+  // Choosing a track means you want to hear it, so this also turns music on.
+  trackEl.addEventListener('change', () => { pickTrack(+trackEl.value); setMusic(true); });
+  audio.setTrack(settings.track || 0); trackEl.value = audio.track;
+  $('music').addEventListener('click', () => setMusic(!audio.on));
+
+  function setMouse(v) { mouseSteer = v; $('mouse').setAttribute('aria-checked', v); saveSettings(); }
+  $('mouse').addEventListener('click', () => setMouse(!mouseSteer));
+  setMouse(mouseSteer);
+
+  function setShell(name) {
+    const b = document.querySelector(`#shells [data-shell=${name}]`) || document.querySelector('#shells button');
+    shell = b.dataset.shell;
+    $('device').dataset.shell = shell;
+    $('shellOut').textContent = b.dataset.name;
+    document.querySelectorAll('#shells button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    saveSettings();
+  }
+  document.querySelectorAll('#shells button').forEach(b => b.addEventListener('click', () => setShell(b.dataset.shell)));
+  setShell(shell);
+
+  function setHint(v) { showHint = v; $('hint').setAttribute('aria-checked', v); saveSettings(); if (snake) draw(); }
+  $('hint').addEventListener('click', () => setHint(!showHint));
+  setHint(showHint);
+
+  function setAuto(v) { autoOn = v; $('autopilot').setAttribute('aria-checked', v); $('autoSecs').disabled = !v; if (!v && piloting) { piloting = false; updateHud(); } saveSettings(); }
+  $('autopilot').addEventListener('click', () => setAuto(!autoOn));
+  const autoEl = $('autoSecs');
+  autoEl.value = autoSecs; $('autoOut').textContent = autoSecs + ' s';
+  autoEl.addEventListener('input', () => { autoSecs = +autoEl.value; $('autoOut').textContent = autoSecs + ' s'; saveSettings(); });
+  setAuto(autoOn);
+  function setAutoCounts(v) { autoCounts = v; $('autoCounts').setAttribute('aria-checked', v); saveSettings(); }
+  $('autoCounts').addEventListener('click', () => setAutoCounts(!autoCounts));
+  setAutoCounts(autoCounts);
+
+  function setBeep(v) { beepOn = v; $('beep').setAttribute('aria-checked', v); saveSettings(); }
+  $('beep').addEventListener('click', () => { setBeep(!beepOn); if (beepOn) { audio.unlock(); sfx.eat(); } });
+  setBeep(beepOn);
+  const sfxEl = $('sfxVol');
+  sfxEl.value = sfxVolume; $('sfxOut').textContent = sfxVolume + '%';
+  sfxEl.addEventListener('input', () => { sfxVolume = +sfxEl.value; $('sfxOut').textContent = sfxVolume + '%'; audio.setSfxVolume(sfxVolume); saveSettings(); });
+  sfxEl.addEventListener('change', () => { audio.unlock(); softBeep(); }); // preview on release
+
+  $('resetHi').addEventListener('click', () => { hi = 0; store.set('snake.hi', 0); updateHud(); });
+
+  // ---------- go ----------
+  setSize(size);
+  requestAnimationFrame(t => { last = t; requestAnimationFrame(loop); });
+})();
+</script>
+</body>
+</html>
