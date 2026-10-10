@@ -1,4 +1,4 @@
-# Pocket Snake Color
+# Snake
 
 A snake game in one HTML file, styled as a Game Boy Color in WLAN Pros colors.
 
